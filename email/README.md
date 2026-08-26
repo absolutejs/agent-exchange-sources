@@ -6,6 +6,10 @@
 > confines provider credentials and OTP processing to a trusted broker but does
 > not make the upstream bearer credential phishing-resistant.
 
+The `0.5.x` line also accepts an exact, passkey-enrolled `standing-mandate`
+with the same token-confined and purpose-bound requirements. The signed mandate
+never broadens the host-owned mailbox profile.
+
 An interchangeable, deterministic email source for
 `@absolutejs/agent-exchange`. It uses `@absolutejs/email/verification` to locate
 one exact verification message and returns the protected value directly to Agent

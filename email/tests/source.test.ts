@@ -126,7 +126,7 @@ describe("email Agent Exchange source", () => {
     expect(JSON.stringify(result.evidence)).not.toContain("482193");
   });
 
-  test("accepts only the explicit token-confined broker alternative", async () => {
+  test("accepts interactive and standing-mandate token-confined broker requests", async () => {
     const source = createEmailVerificationCodeSource({
       lookup: { find: () => Promise.resolve([message()]) },
       now: () => NOW,
@@ -143,6 +143,26 @@ describe("email Agent Exchange source", () => {
       }),
     );
     expect(new TextDecoder().decode(result.bytes)).toBe("482193");
+
+    const standingMandateResult = await source.read(
+      request({
+        assurance: {
+          approval: "standing-mandate",
+          credential: "token-confined-broker",
+          execution: "purpose-bound",
+        },
+        mandateId: "mandate-email-code-1",
+        requester: {
+          agentId: "requester-agent",
+          authority: "https://requester.example",
+          delegationId: "delegation-email-code-1",
+          subject: "requester-user",
+        },
+      }),
+    );
+    expect(new TextDecoder().decode(standingMandateResult.bytes)).toBe(
+      "482193",
+    );
   });
 
   test("requires challenge correlation by default and explicit opt-in for temporal-only mode", async () => {

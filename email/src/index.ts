@@ -86,6 +86,9 @@ const supportedAssurance = (request: AgentExchangeRequest): boolean =>
     request.assurance.execution === "purpose-bound") ||
   (request.assurance.approval === "webauthn-verifier-bound" &&
     request.assurance.credential === "token-confined-broker" &&
+    request.assurance.execution === "purpose-bound") ||
+  (request.assurance.approval === "standing-mandate" &&
+    request.assurance.credential === "token-confined-broker" &&
     request.assurance.execution === "purpose-bound");
 
 export const createEmailVerificationCodeSource = (
