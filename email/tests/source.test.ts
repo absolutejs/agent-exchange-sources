@@ -126,6 +126,25 @@ describe("email Agent Exchange source", () => {
     expect(JSON.stringify(result.evidence)).not.toContain("482193");
   });
 
+  test("accepts only the explicit token-confined broker alternative", async () => {
+    const source = createEmailVerificationCodeSource({
+      lookup: { find: () => Promise.resolve([message()]) },
+      now: () => NOW,
+      profiles: [PROFILE],
+      resolveAccountEmail: () => "member@example.net",
+    });
+    const result = await source.read(
+      request({
+        assurance: {
+          approval: "webauthn-verifier-bound",
+          credential: "token-confined-broker",
+          execution: "purpose-bound",
+        },
+      }),
+    );
+    expect(new TextDecoder().decode(result.bytes)).toBe("482193");
+  });
+
   test("requires challenge correlation by default and explicit opt-in for temporal-only mode", async () => {
     const challengeSource = createEmailVerificationCodeSource({
       lookup: { find: () => Promise.resolve([message()]) },

@@ -1,9 +1,10 @@
 # `@absolutejs/agent-exchange-email`
 
-> Email one-time codes are bearer credentials. This source accepts only the
-> explicit `policy` approval + `bearer` credential + `purpose-bound` execution
-> assurance profile. E2EE protects delivery, but does not make an OTP
-> phishing-resistant.
+> Email one-time codes are bearer credentials. This source accepts either the
+> explicit `policy + bearer + purpose-bound` profile or
+> `webauthn-verifier-bound + token-confined-broker + purpose-bound`. The latter
+> confines provider credentials and OTP processing to a trusted broker but does
+> not make the upstream bearer credential phishing-resistant.
 
 An interchangeable, deterministic email source for
 `@absolutejs/agent-exchange`. It uses `@absolutejs/email/verification` to locate

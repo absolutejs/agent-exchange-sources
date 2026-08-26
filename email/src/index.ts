@@ -80,6 +80,14 @@ const selectProfile = (
   return matches[0]!;
 };
 
+const supportedAssurance = (request: AgentExchangeRequest): boolean =>
+  (request.assurance.approval === "policy" &&
+    request.assurance.credential === "bearer" &&
+    request.assurance.execution === "purpose-bound") ||
+  (request.assurance.approval === "webauthn-verifier-bound" &&
+    request.assurance.credential === "token-confined-broker" &&
+    request.assurance.execution === "purpose-bound");
+
 export const createEmailVerificationCodeSource = (
   options: EmailAgentExchangeSourceOptions,
 ): SensitiveValueSource => {
@@ -98,9 +106,7 @@ export const createEmailVerificationCodeSource = (
   return Object.freeze({
     read: async (request) => {
       if (
-        request.assurance.approval !== "policy" ||
-        request.assurance.credential !== "bearer" ||
-        request.assurance.execution !== "purpose-bound" ||
+        !supportedAssurance(request) ||
         request.processingMode !== "tool-confined" ||
         request.secretKind !== "email-one-time-code" ||
         request.maximumUses !== 1
