@@ -64,11 +64,14 @@ test("email source completes a real Agency and E2EE exchange without receipt lea
         Promise.resolve([
           {
             accountEmail: input.accountEmail,
-            bodyText: "Your verification code is 482193.",
+            authenticationResults: [
+              "mx.mailbox.example; dmarc=pass header.from=example.com",
+            ],
+            bodyText: "Challenge challenge-1. Your verification code: 482193.",
             direction: "inbound",
             from: { address: "security@example.com" },
             id: "gmail-message-1",
-            occurredAt: new Date(),
+            occurredAt: input.notAfter,
             provider: "gmail",
             subject: "Sign in to Example",
             to: [{ address: input.accountEmail }],
@@ -78,11 +81,16 @@ test("email source completes a real Agency and E2EE exchange without receipt lea
     profiles: [
       {
         bodyMarkers: ["verification code"],
+        correlation: { mode: "challenge-text" },
         id: "accounts-example-six-digit-v1",
         operations: ["verification.submit"],
         origins: ["https://accounts.example.com"],
         providers: ["gmail"],
         senderAddresses: ["security@example.com"],
+        senderAuthentication: {
+          allowedHeaderFromDomains: ["example.com"],
+          trustedAuthservIds: ["mx.mailbox.example"],
+        },
         subjectIncludesAny: ["sign in"],
       },
     ],

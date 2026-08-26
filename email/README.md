@@ -21,11 +21,16 @@ const source = createEmailVerificationCodeSource({
   profiles: [
     {
       bodyMarkers: ["verification code"],
+      correlation: { mode: "challenge-text" },
       id: "accounts-example-six-digit-v1",
       operations: ["verification.submit"],
       origins: ["https://accounts.example.com"],
       providers: ["gmail"],
       senderAddresses: ["security@example.com"],
+      senderAuthentication: {
+        allowedHeaderFromDomains: ["example.com"],
+        trustedAuthservIds: ["mx.mailbox.example"],
+      },
       subjectIncludesAny: ["sign in"],
     },
   ],
@@ -43,10 +48,18 @@ Agent Exchange encrypts its mutable byte result and clears it after delivery.
 - Only `tool-confined`, single-use, `email-one-time-code` requests are accepted.
 - The request's exact provider, HTTPS origin, and operation must select exactly
   one profile.
+- `challenge-text` correlation is the default-safe profile mode: the request's
+  `challengeId` must occur exactly in the selected message body.
+- `temporal-only` profiles require both an explicit profile mode and
+  `allowTemporalOnlyCorrelation: true`; use this weaker mode only when an
+  upstream email cannot echo a challenge.
+- The visible sender must have exactly one aligned DMARC pass from a configured,
+  mailbox-trusted RFC 8601 `authserv-id`.
 - The mailbox account reference is resolved through a host-owned directory; it
   is never assumed to be an email address.
 - The default lookup window begins 30 seconds before the Agency request and ends
-  at the earlier of execution time plus five seconds or request expiry.
+  at the earlier of execution time or request expiry. Future clock skew must be
+  enabled explicitly.
 - Multiple messages, multiple marker-bound codes, untrusted senders, stale mail,
   wrong subjects, and lookup failures all become the same safe `source_failed`
   error.

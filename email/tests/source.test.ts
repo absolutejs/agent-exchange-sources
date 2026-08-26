@@ -17,11 +17,16 @@ import { manifest } from "../src/manifest";
 const NOW = Date.parse("2026-08-26T10:00:00.000Z");
 const PROFILE: EmailAgentExchangeProfile = {
   bodyMarkers: ["verification code"],
+  correlation: { mode: "challenge-text" },
   id: "accounts-example-six-digit-v1",
   operations: ["verification.submit"],
   origins: ["https://accounts.example.com"],
   providers: ["gmail"],
   senderAddresses: ["security@example.com"],
+  senderAuthentication: {
+    allowedHeaderFromDomains: ["example.com"],
+    trustedAuthservIds: ["mx.mailbox.example"],
+  },
   subjectIncludesAny: ["sign in"],
 };
 
@@ -62,7 +67,10 @@ const message = (
   overrides: Partial<NormalizedEmailMessage> = {},
 ): NormalizedEmailMessage => ({
   accountEmail: "member@example.net",
-  bodyText: "Your verification code is 482193.",
+  authenticationResults: [
+    "mx.mailbox.example; dmarc=pass header.from=example.com",
+  ],
+  bodyText: "Challenge challenge-1. Your verification code: 482193.",
   direction: "inbound",
   from: { address: "security@example.com" },
   id: "gmail-message-1",
@@ -93,19 +101,70 @@ describe("email Agent Exchange source", () => {
 
     const result = await source.read(request());
     expect(new TextDecoder().decode(result.bytes)).toBe("482193");
-    expect(result.evidence).toEqual({
+    expect(result.evidence).toMatchObject({
       matchedAt: NOW - 5_000,
       messageId: "gmail-message-1",
       parserId: PROFILE.id,
       provider: "gmail",
     });
+    expect(
+      (result.evidence as { readonly senderAuthenticated?: unknown })
+        .senderAuthenticated,
+    ).toBe(true);
     expect(lookupInput).toMatchObject({
       accountEmail: "member@example.net",
       profile: PROFILE,
     });
     expect(lookupInput?.notBefore.getTime()).toBe(NOW - 40_000);
-    expect(lookupInput?.notAfter.getTime()).toBe(NOW + 5_000);
+    expect(lookupInput?.notAfter.getTime()).toBe(NOW);
+    expect(lookupInput?.requiredBodyText).toEqual(["challenge-1"]);
     expect(JSON.stringify(result.evidence)).not.toContain("482193");
+  });
+
+  test("requires challenge correlation by default and explicit opt-in for temporal-only mode", async () => {
+    const challengeSource = createEmailVerificationCodeSource({
+      lookup: { find: () => Promise.resolve([message()]) },
+      now: () => NOW,
+      profiles: [PROFILE],
+      resolveAccountEmail: () => "member@example.net",
+    });
+    await expect(
+      challengeSource.read(
+        request({
+          resource: {
+            accountRef: "mailbox-account-1",
+            operation: "verification.submit",
+            origin: "https://accounts.example.com",
+            provider: "gmail",
+          },
+        }),
+      ),
+    ).rejects.toEqual(new AgentExchangeError("source_failed"));
+
+    const temporalProfile: EmailAgentExchangeProfile = {
+      ...PROFILE,
+      correlation: { mode: "temporal-only" },
+    };
+    const disabled = createEmailVerificationCodeSource({
+      lookup: { find: () => Promise.resolve([message()]) },
+      now: () => NOW,
+      profiles: [temporalProfile],
+      resolveAccountEmail: () => "member@example.net",
+    });
+    await expect(disabled.read(request())).rejects.toEqual(
+      new AgentExchangeError("source_failed"),
+    );
+
+    const enabled = createEmailVerificationCodeSource({
+      allowTemporalOnlyCorrelation: true,
+      lookup: { find: () => Promise.resolve([message()]) },
+      now: () => NOW,
+      profiles: [temporalProfile],
+      resolveAccountEmail: () => "member@example.net",
+    });
+    expect(
+      new TextDecoder().decode((await enabled.read(request())).bytes),
+    ).toBe("482193");
   });
 
   test("rejects weaker modes, wrong secret kinds, and non-single-use requests before lookup", async () => {
@@ -193,12 +252,14 @@ describe("email Agent Exchange source", () => {
 test("declares only the tool-confined source capability", () => {
   expect(EMAIL_AGENT_EXCHANGE_SOURCE_MANIFEST).toEqual({
     assurance: "experimental",
+    correlationModes: ["challenge-text", "temporal-only"],
     modelCanObserveSecret: false,
     packageName: "@absolutejs/agent-exchange-email",
     processingModes: ["tool-confined"],
     providers: ["gmail", "microsoft", "imap"],
     role: "source",
     secretKinds: ["email-one-time-code"],
+    senderAuthentication: "trusted-authserv-dmarc",
   });
   expect(Object.keys(manifest.tools ?? {})).toHaveLength(0);
 });
