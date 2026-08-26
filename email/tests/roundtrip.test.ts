@@ -114,6 +114,11 @@ test("email source completes a real Agency and E2EE exchange without receipt lea
     transport: { deliver: (delivery) => receiver.receive(delivery) },
   });
   const requested = await sender.request({
+    assurance: {
+      approval: "policy",
+      credential: "bearer",
+      execution: "purpose-bound",
+    },
     expiresAt: Date.now() + 60_000,
     purpose: "email.verification.submit",
     recipient: {

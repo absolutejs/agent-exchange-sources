@@ -98,6 +98,9 @@ export const createEmailVerificationCodeSource = (
   return Object.freeze({
     read: async (request) => {
       if (
+        request.assurance.approval !== "policy" ||
+        request.assurance.credential !== "bearer" ||
+        request.assurance.execution !== "purpose-bound" ||
         request.processingMode !== "tool-confined" ||
         request.secretKind !== "email-one-time-code" ||
         request.maximumUses !== 1

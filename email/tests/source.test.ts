@@ -34,6 +34,11 @@ const request = (
   overrides: Partial<AgentExchangeRequest> = {},
 ): AgentExchangeRequest => ({
   actionId: "act_source-test",
+  assurance: {
+    approval: "policy",
+    credential: "bearer",
+    execution: "purpose-bound",
+  },
   createdAt: NOW - 10_000,
   exchangeId: "xchg_source-test",
   expiresAt: NOW + 60_000,
@@ -167,7 +172,7 @@ describe("email Agent Exchange source", () => {
     ).toBe("482193");
   });
 
-  test("rejects weaker modes, wrong secret kinds, and non-single-use requests before lookup", async () => {
+  test("rejects dishonest assurance, weaker modes, wrong secret kinds, and non-single-use requests before lookup", async () => {
     let lookups = 0;
     const source = createEmailVerificationCodeSource({
       lookup: {
@@ -182,6 +187,13 @@ describe("email Agent Exchange source", () => {
     });
 
     for (const invalid of [
+      request({
+        assurance: {
+          approval: "webauthn-verifier-bound",
+          credential: "sender-constrained",
+          execution: "purpose-bound",
+        },
+      }),
       request({ processingMode: "model-visible" }),
       request({ secretKind: "password" }),
       request({ maximumUses: 2 as never }),
