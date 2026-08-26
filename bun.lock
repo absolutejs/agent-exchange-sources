@@ -12,9 +12,9 @@
     },
     "email": {
       "name": "@absolutejs/agent-exchange-email",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
-        "@absolutejs/email": "0.3.0",
+        "@absolutejs/email": "0.3.1",
         "@absolutejs/manifest": "^0.9.0",
         "@sinclair/typebox": "^0.34.0",
       },
@@ -44,7 +44,7 @@
 
     "@absolutejs/e2ee-webcrypto": ["@absolutejs/e2ee-webcrypto@0.1.0", "", { "dependencies": { "@absolutejs/manifest": "^0.9.0", "@sinclair/typebox": "^0.34.0", "hpke": "1.1.4" }, "peerDependencies": { "@absolutejs/e2ee": ">=0.1.0 <0.2" } }, "sha512-d47cOgMBcFnKxfaMCdLh0RiFYgs/q2PdVPsB8yliBHXpKsXMb9SqNHW7SGeTdHBsz0i50UhHnYTWrf3OlCE/nw=="],
 
-    "@absolutejs/email": ["@absolutejs/email@0.3.0", "", { "dependencies": { "@absolutejs/manifest": "^0.9.0", "@sinclair/typebox": "^0.34.0", "imapflow": "^1.4.1" } }, "sha512-ujHP/CQ0mEJz3l1IDUfNKsgQP0/7y6TAXCL1HHIcpchP897BFK1n8aOVIWE4BwAu+sZebAKoXIofMhsNXkY9wQ=="],
+    "@absolutejs/email": ["@absolutejs/email@0.3.1", "", { "dependencies": { "@absolutejs/manifest": "^0.9.0", "@sinclair/typebox": "^0.34.0", "imapflow": "^1.4.1" } }, "sha512-tiwZAP37xNKzoo8V3Z3kBgOB9Z1IIynvldyBbUcr5uu0kkdyHUWg+rpu7/5wjmNRktrOkmhPxxXUfwyhirA74Q=="],
 
     "@absolutejs/manifest": ["@absolutejs/manifest@0.9.0", "", { "peerDependencies": { "@sinclair/typebox": ">=0.34.0 <0.35.0" }, "bin": { "absolute-manifest": "dist/cli.js" } }, "sha512-naNDdwNoWQgJ3HuFbAu1UcOVR7SGpLBJz/seO8MMX32vrxk6esgzY7OB1CL8YDOegtI/EqQfcvnulnP66A9aGg=="],
 
