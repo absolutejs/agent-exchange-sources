@@ -1,6 +1,6 @@
 {
   "name": "@absolutejs/agent-exchange-email",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Deterministic, model-blind email verification-code source for @absolutejs/agent-exchange.",
   "type": "module",
   "license": "Apache-2.0",
@@ -55,7 +55,7 @@
     "verify-package": "absolute-manifest verify-package"
   },
   "dependencies": {
-    "@absolutejs/email": "0.2.0",
+    "@absolutejs/email": "0.2.1",
     "@absolutejs/manifest": "^0.9.0",
     "@sinclair/typebox": "^0.34.0"
   },

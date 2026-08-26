@@ -5,6 +5,9 @@ An interchangeable, deterministic email source for
 one exact verification message and returns the protected value directly to Agent
 Exchange for encryption.
 
+Gmail and Microsoft Graph lookups are browser-safe. IMAP is server-only and is
+created from `@absolutejs/email/verification/imap` before being passed here.
+
 ```bash
 bun add @absolutejs/agent-exchange @absolutejs/agent-exchange-email @absolutejs/email
 ```
