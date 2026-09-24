@@ -77,3 +77,9 @@ Agent Exchange encrypts its mutable byte result and clears it after delivery.
 Email OTPs remain bearer credentials and are not phishing-resistant. Prefer
 OAuth, passkeys, service accounts, or provider-native delegated actions whenever
 possible.
+
+This release uses Email 0.6.0 for explicit `standalone-after-marker` code layouts
+and preserved HTML block boundaries. Existing immediate-marker profiles retain
+their behavior. Temporal-only correlation still requires explicit opt-in and does
+not prove a cryptographic binding between a provider email and a browser session;
+callers must serialize attempts and bind the destination separately.
