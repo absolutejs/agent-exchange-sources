@@ -83,3 +83,10 @@ and preserved HTML block boundaries. Existing immediate-marker profiles retain
 their behavior. Temporal-only correlation still requires explicit opt-in and does
 not prove a cryptographic binding between a provider email and a browser session;
 callers must serialize attempts and bind the destination separately.
+
+`createEmailVerificationCodeSource` accepts an optional `onFailure` observer.
+It receives only a fixed category (`no_match`, `ambiguous_match`, `candidate_limit`,
+`invalid_profile`, `lookup_failed`, or `source_rejected`). It never receives the
+caught exception, code, message body, provider response, or source evidence.
+Observer failures are ignored and retrieval continues to fail closed. Hosts may
+record these categories for operational diagnosis without exposing secrets.
