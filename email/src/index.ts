@@ -5,6 +5,7 @@ import {
 } from "@absolutejs/agent-exchange";
 import {
   retrieveEmailVerificationCode,
+  EmailVerificationError,
   type EmailVerificationMessageLookup,
   type EmailVerificationProfile,
 } from "@absolutejs/email/verification";
@@ -23,7 +24,16 @@ export type EmailAgentExchangeProfile = EmailVerificationProfile & {
   readonly operations: readonly string[];
 };
 
+export type EmailSourceFailure =
+  | "ambiguous_match"
+  | "candidate_limit"
+  | "invalid_profile"
+  | "lookup_failed"
+  | "no_match"
+  | "source_rejected";
 export type EmailAgentExchangeSourceOptions = {
+  /** Fixed categories only: no message, body, code, token or source evidence. */
+  readonly onFailure?: (failure: EmailSourceFailure) => void;
   readonly allowTemporalOnlyCorrelation?: boolean;
   readonly clockSkewMs?: number;
   readonly lookup: EmailVerificationMessageLookup;
@@ -158,7 +168,23 @@ export const createEmailVerificationCodeSource = (
           profile,
           requiredBodyText,
         });
-      } catch {
+      } catch (error) {
+        const known = [
+          "ambiguous_match",
+          "candidate_limit",
+          "invalid_profile",
+          "lookup_failed",
+          "no_match",
+        ];
+        const failure: EmailSourceFailure =
+          error instanceof EmailVerificationError && known.includes(error.code)
+            ? error.code
+            : "source_rejected";
+        try {
+          options.onFailure?.(failure);
+        } catch {
+          /* Observers cannot change authorization or expose errors. */
+        }
         throw new AgentExchangeError("source_failed");
       }
     },

@@ -323,3 +323,25 @@ test("public source contracts use type aliases instead of interfaces", async () 
     expect(source).not.toMatch(/\binterface\s+[A-Za-z_$]/u);
   }
 });
+
+test("failure observer receives only a fixed category and cannot leak a thrown error", async () => {
+  const failures: string[] = [];
+  const source = createEmailVerificationCodeSource({
+    lookup: {
+      find: async () => {
+        throw new Error("private provider response");
+      },
+    },
+    now: () => NOW,
+    profiles: [PROFILE],
+    resolveAccountEmail: () => "member@example.net",
+    onFailure: (failure) => {
+      failures.push(failure);
+      throw Error("private observer response");
+    },
+  });
+  await expect(source.read(request())).rejects.toThrow(
+    "Sensitive value retrieval failed.",
+  );
+  expect(failures).toEqual(["lookup_failed"]);
+});
