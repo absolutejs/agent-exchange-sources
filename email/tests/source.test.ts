@@ -345,3 +345,64 @@ test("failure observer receives only a fixed category and cannot leak a thrown e
   );
   expect(failures).toEqual(["lookup_failed"]);
 });
+
+test("newest selection uses the latest authenticated code across a long lookback", async () => {
+  const temporalProfile: EmailAgentExchangeProfile = {
+    ...PROFILE,
+    correlation: { mode: "temporal-only" },
+  };
+  const seen: EmailVerificationLookupInput[] = [];
+  const messages = [
+    message({
+      bodyText: "Your verification code: 111111.",
+      id: "older",
+      occurredAt: new Date(NOW - 30 * 60_000),
+    }),
+    message({
+      bodyText: "Your verification code: 222222.",
+      id: "newer",
+      occurredAt: new Date(NOW - 8 * 60_000),
+    }),
+  ];
+  const lookup = {
+    find: (input: EmailVerificationLookupInput) => {
+      seen.push(input);
+      return Promise.resolve(messages);
+    },
+  };
+  const newest = createEmailVerificationCodeSource({
+    allowTemporalOnlyCorrelation: true,
+    lookup,
+    maxLookbackMs: 60 * 60_000,
+    now: () => NOW,
+    profiles: [temporalProfile],
+    resolveAccountEmail: () => "member@example.net",
+    selection: "newest",
+  });
+  expect(new TextDecoder().decode((await newest.read(request())).bytes)).toBe(
+    "222222",
+  );
+  expect(seen[0]?.selection).toBe("newest");
+
+  // Unique selection keeps the two-minute cap and rejects several matches.
+  expect(() =>
+    createEmailVerificationCodeSource({
+      allowTemporalOnlyCorrelation: true,
+      lookup,
+      maxLookbackMs: 60 * 60_000,
+      profiles: [temporalProfile],
+      resolveAccountEmail: () => "member@example.net",
+    }),
+  ).toThrow();
+  const unique = createEmailVerificationCodeSource({
+    allowTemporalOnlyCorrelation: true,
+    lookup,
+    maxLookbackMs: 2 * 60_000,
+    now: () => NOW,
+    profiles: [temporalProfile],
+    resolveAccountEmail: () => "member@example.net",
+  });
+  await expect(unique.read(request())).rejects.toEqual(
+    new AgentExchangeError("source_failed"),
+  );
+});
