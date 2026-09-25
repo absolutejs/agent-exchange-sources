@@ -1,6 +1,6 @@
 {
   "name": "@absolutejs/agent-exchange-email",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Deterministic, model-blind email verification-code source for @absolutejs/agent-exchange.",
   "type": "module",
   "license": "Apache-2.0",

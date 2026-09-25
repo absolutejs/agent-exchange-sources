@@ -167,6 +167,15 @@ export const createEmailVerificationCodeSource = (
         if (notAfter < request.createdAt - maxLookbackMs) {
           throw new AgentExchangeError("source_failed");
         }
+        // The lookup caps the whole window, not just the lookback: trim the start
+        // so a maximal lookback plus the request's lifetime still fits.
+        const notBefore =
+          options.selection === "newest"
+            ? Math.max(
+                request.createdAt - maxLookbackMs,
+                notAfter - MAX_NEWEST_LOOKBACK_MS,
+              )
+            : request.createdAt - maxLookbackMs;
 
         return await retrieveEmailVerificationCode(options.lookup, {
           accountEmail,
@@ -178,7 +187,7 @@ export const createEmailVerificationCodeSource = (
             ? {}
             : { maxCandidates: options.maxCandidates }),
           notAfter: new Date(notAfter),
-          notBefore: new Date(request.createdAt - maxLookbackMs),
+          notBefore: new Date(notBefore),
           ...(options.selection === "newest"
             ? { selection: "newest" as const }
             : {}),

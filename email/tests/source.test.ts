@@ -406,3 +406,26 @@ test("newest selection uses the latest authenticated code across a long lookback
     new AgentExchangeError("source_failed"),
   );
 });
+
+test("a full 24-hour newest lookback still fits the lookup window cap", async () => {
+  const seen: EmailVerificationLookupInput[] = [];
+  const source = createEmailVerificationCodeSource({
+    allowTemporalOnlyCorrelation: true,
+    lookup: {
+      find: (input: EmailVerificationLookupInput) => {
+        seen.push(input);
+        return Promise.resolve([message()]);
+      },
+    },
+    maxLookbackMs: 24 * 60 * 60_000,
+    now: () => NOW,
+    profiles: [{ ...PROFILE, correlation: { mode: "temporal-only" } }],
+    resolveAccountEmail: () => "member@example.net",
+    selection: "newest",
+  });
+  expect(new TextDecoder().decode((await source.read(request())).bytes)).toBe(
+    "482193",
+  );
+  const window = seen[0]!.notAfter.getTime() - seen[0]!.notBefore.getTime();
+  expect(window).toBe(24 * 60 * 60_000);
+});
