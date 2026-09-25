@@ -84,6 +84,12 @@ their behavior. Temporal-only correlation still requires explicit opt-in and doe
 not prove a cryptographic binding between a provider email and a browser session;
 callers must serialize attempts and bind the destination separately.
 
+`selection: "newest"` (with `@absolutejs/email` 0.7) uses the most recent
+sender-authenticated match instead of failing when several messages match, and
+allows `maxLookbackMs` up to 24 hours. It is meant for `temporal-only` services
+whose emails carry no per-request challenge, where the mailbox owner has chosen
+"use the latest code". The default `unique` selection keeps the two-minute cap.
+
 `createEmailVerificationCodeSource` accepts an optional `onFailure` observer.
 It receives only a fixed category (`no_match`, `ambiguous_match`, `candidate_limit`,
 `invalid_profile`, `lookup_failed`, or `source_rejected`). It never receives the
