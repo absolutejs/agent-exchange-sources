@@ -5,6 +5,7 @@ import {
 } from "@absolutejs/agent-exchange";
 import {
   retrieveEmailVerificationCode,
+  EmailVerificationError,
   type EmailVerificationMessageLookup,
   type EmailVerificationProfile,
 } from "@absolutejs/email/verification";
@@ -13,6 +14,8 @@ const DEFAULT_CLOCK_SKEW_MS = 0;
 const DEFAULT_LOOKBACK_MS = 30_000;
 const MAX_CLOCK_SKEW_MS = 30_000;
 const MAX_LOOKBACK_MS = 2 * 60_000;
+// Newest selection only ever uses the latest authenticated match.
+const MAX_NEWEST_LOOKBACK_MS = 24 * 60 * 60_000;
 const MAX_CHALLENGE_LENGTH = 256;
 
 export type EmailAgentExchangeCorrelation =
@@ -23,13 +26,28 @@ export type EmailAgentExchangeProfile = EmailVerificationProfile & {
   readonly operations: readonly string[];
 };
 
+export type EmailSourceFailure =
+  | "ambiguous_match"
+  | "candidate_limit"
+  | "invalid_profile"
+  | "lookup_failed"
+  | "no_match"
+  | "source_rejected";
 export type EmailAgentExchangeSourceOptions = {
+  /** Fixed categories only: no message, body, code, token or source evidence. */
+  readonly onFailure?: (failure: EmailSourceFailure) => void;
   readonly allowTemporalOnlyCorrelation?: boolean;
   readonly clockSkewMs?: number;
   readonly lookup: EmailVerificationMessageLookup;
   readonly maxBodyBytes?: number;
   readonly maxCandidates?: number;
   readonly maxLookbackMs?: number;
+  /**
+   * "unique" (default) fails when several messages match. "newest" uses the most
+   * recent authenticated match and allows a lookback of up to 24 hours; intended
+   * for temporal-only services whose emails carry no per-request challenge.
+   */
+  readonly selection?: "unique" | "newest";
   readonly now?: () => number;
   readonly profiles: readonly EmailAgentExchangeProfile[];
   readonly resolveAccountEmail: (
@@ -98,7 +116,13 @@ export const createEmailVerificationCodeSource = (
   const maxLookbackMs = options.maxLookbackMs ?? DEFAULT_LOOKBACK_MS;
   if (
     !validBoundedInteger(clockSkewMs, MAX_CLOCK_SKEW_MS) ||
-    !validBoundedInteger(maxLookbackMs, MAX_LOOKBACK_MS) ||
+    (options.selection !== undefined &&
+      options.selection !== "unique" &&
+      options.selection !== "newest") ||
+    !validBoundedInteger(
+      maxLookbackMs,
+      options.selection === "newest" ? MAX_NEWEST_LOOKBACK_MS : MAX_LOOKBACK_MS,
+    ) ||
     !Array.isArray(options.profiles) ||
     options.profiles.length === 0
   ) {
@@ -143,6 +167,15 @@ export const createEmailVerificationCodeSource = (
         if (notAfter < request.createdAt - maxLookbackMs) {
           throw new AgentExchangeError("source_failed");
         }
+        // The lookup caps the whole window, not just the lookback: trim the start
+        // so a maximal lookback plus the request's lifetime still fits.
+        const notBefore =
+          options.selection === "newest"
+            ? Math.max(
+                request.createdAt - maxLookbackMs,
+                notAfter - MAX_NEWEST_LOOKBACK_MS,
+              )
+            : request.createdAt - maxLookbackMs;
 
         return await retrieveEmailVerificationCode(options.lookup, {
           accountEmail,
@@ -154,11 +187,30 @@ export const createEmailVerificationCodeSource = (
             ? {}
             : { maxCandidates: options.maxCandidates }),
           notAfter: new Date(notAfter),
-          notBefore: new Date(request.createdAt - maxLookbackMs),
+          notBefore: new Date(notBefore),
+          ...(options.selection === "newest"
+            ? { selection: "newest" as const }
+            : {}),
           profile,
           requiredBodyText,
         });
-      } catch {
+      } catch (error) {
+        const known = [
+          "ambiguous_match",
+          "candidate_limit",
+          "invalid_profile",
+          "lookup_failed",
+          "no_match",
+        ];
+        const failure: EmailSourceFailure =
+          error instanceof EmailVerificationError && known.includes(error.code)
+            ? error.code
+            : "source_rejected";
+        try {
+          options.onFailure?.(failure);
+        } catch {
+          /* Observers cannot change authorization or expose errors. */
+        }
         throw new AgentExchangeError("source_failed");
       }
     },
